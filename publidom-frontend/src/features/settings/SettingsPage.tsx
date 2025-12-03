@@ -18,6 +18,30 @@ const SECTIONS = [
 
 export function SettingsPage() {
     const [activeSection, setActiveSection] = useState("personal-info");
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const res = await fetch('http://localhost:3000/api/users/profile', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setUser(data);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);
@@ -54,17 +78,23 @@ export function SettingsPage() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
+    if (loading) return <div className="p-10 text-center">Loading profile...</div>;
+
     return (
         <div className="min-h-screen bg-white">
             <div className="max-w-6xl mx-auto px-6 py-12">
                 {/* Header */}
                 <div className="flex items-center gap-5 mb-16">
                     <Avatar className="h-16 w-16 bg-gray-50 border border-gray-100">
-                        <AvatarFallback className="bg-gray-50 text-gray-900 font-bold text-2xl">R</AvatarFallback>
+                        <AvatarFallback className="bg-gray-50 text-gray-900 font-bold text-2xl">
+                            {user?.first_name?.[0]}{user?.last_name?.[0]}
+                        </AvatarFallback>
                     </Avatar>
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Rayner Rodrguez</h1>
-                        <p className="text-gray-400 font-medium">clipadicto@gmail.com</p>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                            {user?.first_name} {user?.last_name}
+                        </h1>
+                        <p className="text-gray-400 font-medium">@{user?.username}</p>
                     </div>
                 </div>
 
@@ -101,7 +131,7 @@ export function SettingsPage() {
                                     transition={{ duration: 0.5, ease: "easeOut" }}
                                     className="scroll-mt-32"
                                 >
-                                    <Component />
+                                    <Component user={user} />
                                 </motion.div>
                             );
                         })}

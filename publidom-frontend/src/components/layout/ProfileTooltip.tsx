@@ -7,9 +7,11 @@ import { Link } from "react-router-dom";
 interface ProfileTooltipProps {
     isOpen: boolean;
     onClose: () => void;
+    onLogout: () => void;
+    user: any;
 }
 
-export function ProfileTooltip({ isOpen, onClose }: ProfileTooltipProps) {
+export function ProfileTooltip({ isOpen, onClose, onLogout, user }: ProfileTooltipProps) {
     const tooltipRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -28,7 +30,7 @@ export function ProfileTooltip({ isOpen, onClose }: ProfileTooltipProps) {
         };
     }, [isOpen, onClose]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !user) return null;
 
     return (
         <div
@@ -41,10 +43,10 @@ export function ProfileTooltip({ isOpen, onClose }: ProfileTooltipProps) {
                     CLIPPER
                 </Badge>
                 <h3 className="text-base font-bold text-gray-900 leading-tight tracking-tight">
-                    Rayner Rodrguez
+                    {user.first_name} {user.last_name}
                 </h3>
                 <p className="text-xs text-gray-400 font-medium">
-                    clipadicto@gmail.com
+                    {user.email}
                 </p>
             </div>
 
@@ -83,7 +85,10 @@ export function ProfileTooltip({ isOpen, onClose }: ProfileTooltipProps) {
 
             {/* Logout */}
             <div className="mb-3 px-2">
-                <button className="text-xs font-medium text-gray-600 hover:text-red-500 transition-colors">
+                <button
+                    onClick={onLogout}
+                    className="text-xs font-medium text-gray-600 hover:text-red-500 transition-colors"
+                >
                     Cerrar sesión
                 </button>
             </div>

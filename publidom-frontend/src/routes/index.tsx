@@ -4,7 +4,9 @@ import AddClipsPage from "@/features/add-clips/AddClipsPage";
 import { EarningsPage } from "@/features/earnings/EarningsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import Login from "@/features/auth/Login";
+import Signup from "@/features/auth/Signup";
 import App from "@/App"; // Assuming App is the main layout component
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export const router = createBrowserRouter([
     {
@@ -12,24 +14,33 @@ export const router = createBrowserRouter([
         element: <Login />,
     },
     {
+        path: "/signup",
+        element: <Signup />,
+    },
+    {
         path: "/",
-        element: <App />,
+        element: <ProtectedRoute />,
         children: [
             {
-                index: true,
-                element: <DashboardPage />,
-            },
-            {
-                path: "add-clips",
-                element: <AddClipsPage />,
-            },
-            {
-                path: "earnings",
-                element: <EarningsPage />,
-            },
-            {
-                path: "settings",
-                element: <SettingsPage />,
+                element: <App />,
+                children: [
+                    {
+                        index: true,
+                        element: <DashboardPage />,
+                    },
+                    {
+                        path: "add-clips",
+                        element: <AddClipsPage />,
+                    },
+                    {
+                        path: "earnings",
+                        element: <EarningsPage />,
+                    },
+                    {
+                        path: "settings",
+                        element: <SettingsPage />,
+                    },
+                ],
             },
         ],
     },

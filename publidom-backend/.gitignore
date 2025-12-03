@@ -1,2 +1,5 @@
 node_modules/
-supabase_schema.sql
+add_email_to_profiles.sql
+add_missing_tables.sql
+fix_trigger.sql
+supabase_schema.sql 

@@ -1,11 +1,21 @@
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 export default function Login() {
+    const navigate = useNavigate();
+    const location = useLocation();
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    useEffect(() => {
+        if (location.state?.message) {
+            setMessage({ type: 'success', text: location.state.message });
+            // Clear state so message doesn't persist on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -13,19 +23,24 @@ export default function Login() {
         setMessage(null);
 
         try {
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: window.location.origin,
-                },
+            const response = await fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
 
-            if (error) throw error;
+            const data = await response.json();
 
-            setMessage({
-                type: 'success',
-                text: 'Check your email for the login link!',
-            });
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
+            }
+
+            // Store token and timestamp
+            localStorage.setItem('token', data.session.access_token);
+            localStorage.setItem('loginTimestamp', new Date().getTime().toString());
+
+            // Redirect to dashboard
+            navigate('/');
         } catch (error: any) {
             setMessage({
                 type: 'error',
@@ -44,7 +59,7 @@ export default function Login() {
                         Welcome back
                     </h2>
                     <p className="mt-2 text-sm text-gray-600">
-                        We'll send you a code to log in.
+                        Please enter your details to log in.
                     </p>
                     <p className="mt-1 text-sm text-gray-600">
                         New to Publidom?{' '}
@@ -61,7 +76,7 @@ export default function Login() {
                 )}
 
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-                    <div className="-space-y-px rounded-md shadow-sm">
+                    <div className="space-y-4 rounded-md shadow-sm">
                         <div>
                             <label htmlFor="email-address" className="sr-only">
                                 Email address
@@ -78,6 +93,22 @@ export default function Login() {
                                 placeholder="Email"
                             />
                         </div>
+                        <div>
+                            <label htmlFor="password" className="sr-only">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="relative block w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-black sm:text-sm transition-colors"
+                                placeholder="Password"
+                            />
+                        </div>
                     </div>
 
                     <div>
@@ -86,7 +117,7 @@ export default function Login() {
                             disabled={loading}
                             className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-70 transition-all"
                         >
-                            {loading ? 'Sending...' : 'Continue'}
+                            {loading ? 'Logging in...' : 'Continue'}
                         </button>
                     </div>
                 </form>

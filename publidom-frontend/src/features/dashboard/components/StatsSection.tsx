@@ -1,29 +1,61 @@
 import { Card, CardContent } from "@/components/ui/card";
-
-const stats = [
-    {
-        label: "Perfiles",
-        value: "2",
-    },
-    {
-        label: "Posts",
-        value: "16",
-    },
-    {
-        label: "Seguidores",
-        value: "8",
-    },
-    {
-        label: "Vistas",
-        value: "18",
-    },
-    {
-        label: "Vistas Prom.",
-        value: "1",
-    },
-];
+import { useState, useEffect } from "react";
 
 export function StatsSection() {
+    const [stats, setStats] = useState({
+        total_profiles: 0,
+        total_posts: 0,
+        total_followers: 0,
+        total_views: 0,
+        average_views: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const res = await fetch('http://localhost:3000/api/stats', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setStats(data);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    const statsDisplay = [
+        {
+            label: "Perfiles",
+            value: stats.total_profiles.toString(),
+        },
+        {
+            label: "Posts",
+            value: stats.total_posts.toString(),
+        },
+        {
+            label: "Seguidores",
+            value: stats.total_followers.toString(),
+        },
+        {
+            label: "Vistas",
+            value: stats.total_views.toString(),
+        },
+        {
+            label: "Vistas Prom.",
+            value: Math.round(stats.average_views).toString(),
+        },
+    ];
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -38,11 +70,13 @@ export function StatsSection() {
                 </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {stats.map((stat) => (
+                {statsDisplay.map((stat) => (
                     <Card key={stat.label} className="border border-gray-100 bg-white shadow-none rounded-[2rem]">
                         <CardContent className="p-6 flex flex-col justify-between h-32">
                             <span className="text-xs font-bold text-gray-500">{stat.label}</span>
-                            <span className="text-3xl font-bold tracking-tighter text-black self-end">{stat.value}</span>
+                            <span className="text-3xl font-bold tracking-tighter text-black self-end">
+                                {loading ? "..." : stat.value}
+                            </span>
                         </CardContent>
                     </Card>
                 ))}

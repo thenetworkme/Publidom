@@ -4,11 +4,39 @@ import { IconHome, IconCards, IconBusinessplan } from "@tabler/icons-react";
 import { useLocation } from "react-router-dom";
 import { NavItem } from "./NavItem";
 import { ProfileTooltip } from "./ProfileTooltip";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function Header() {
     const location = useLocation();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [user, setUser] = useState<any>(null);
+
+    // Fetch user profile on mount
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const res = await fetch('http://localhost:3000/api/users/profile', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setUser(data);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('loginTimestamp');
+        window.location.href = '/login';
+    };
 
     return (
         <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
@@ -48,13 +76,17 @@ export function Header() {
                         className="focus:outline-none"
                     >
                         <Avatar className="h-9 w-9 bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
-                            <AvatarFallback className="bg-gray-200 text-gray-600 font-medium">R</AvatarFallback>
+                            <AvatarFallback className="bg-gray-200 text-gray-600 font-medium">
+                                {user?.first_name?.[0] || user?.username?.[0] || 'U'}
+                            </AvatarFallback>
                         </Avatar>
                     </button>
 
                     <ProfileTooltip
                         isOpen={isProfileOpen}
                         onClose={() => setIsProfileOpen(false)}
+                        onLogout={handleLogout}
+                        user={user}
                     />
                 </div>
             </div>
