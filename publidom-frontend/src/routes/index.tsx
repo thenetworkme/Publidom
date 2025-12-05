@@ -7,6 +7,8 @@ import Login from "@/features/auth/Login";
 import Signup from "@/features/auth/Signup";
 import App from "@/App"; // Assuming App is the main layout component
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminGuard } from "@/features/auth/components/AdminGuard";
+import AdminCampaignsPage from "@/features/admin/AdminCampaignsPage";
 
 export const router = createBrowserRouter([
     {
@@ -39,6 +41,16 @@ export const router = createBrowserRouter([
                     {
                         path: "settings",
                         element: <SettingsPage />,
+                    },
+                    {
+                        path: "admin",
+                        element: <AdminGuard />,
+                        children: [
+                            {
+                                path: "campaigns",
+                                element: <AdminCampaignsPage />,
+                            },
+                        ],
                     },
                 ],
             },

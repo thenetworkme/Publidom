@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -35,12 +36,31 @@ export default function Login() {
                 throw new Error(data.error || 'Login failed');
             }
 
-            // Store token and timestamp
+            // CRITICAL: Set the session in the Supabase client
+            // This allows useProfile and other Supabase queries to work correctly
+            await supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token
+            });
+            console.log('[DEBUG] Supabase session set successfully');
+
+            // Store token and timestamp (for ProtectedRoute compatibility)
             localStorage.setItem('token', data.session.access_token);
             localStorage.setItem('loginTimestamp', new Date().getTime().toString());
 
-            // Redirect to dashboard
-            navigate('/');
+            // Store role if needed
+            if (data.role) {
+                localStorage.setItem('userRole', data.role);
+            }
+
+            // Check role from response and redirect
+            if (data.role === 'admin') {
+                console.log('[DEBUG] Redirecting to /admin/campaigns');
+                navigate('/admin/campaigns');
+            } else {
+                console.log('[DEBUG] Redirecting to /');
+                navigate('/');
+            }
         } catch (error: any) {
             setMessage({
                 type: 'error',

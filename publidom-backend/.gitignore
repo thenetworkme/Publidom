@@ -1,5 +1,15 @@
 node_modules/
 add_email_to_profiles.sql
 add_missing_tables.sql
+comprehensive_fix.sql
+failsafe_fix.sql
+diagnose_trigger.sql
+supabase_schema.sql
+fix_registration_trigger.sql
 fix_trigger.sql
-supabase_schema.sql 
+fix_and_sync.sql
+cleanup_profiles.sql
+delete_auth_users.js
+admin_features.sql
+diagnose_admin.sql 
+diagnose_admin.js
