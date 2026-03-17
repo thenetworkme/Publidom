@@ -19,3 +19,4 @@ create_video_submissions.sql
 .env.local
 .env.development
 .env.production
+.env.example
