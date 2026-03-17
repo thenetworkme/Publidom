@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Campaign } from '@/types/campaign';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Users } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 
 interface CampaignListProps {
     campaigns: Campaign[];
@@ -35,73 +34,107 @@ export function CampaignList({ campaigns, onRefresh, onEdit }: CampaignListProps
         }
     };
 
+    // Helper to format time ago
+    const timeAgo = (dateString: string): string => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+        if (seconds < 60) return 'Ahora';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h`;
+        const days = Math.floor(hours / 24);
+        return `${days}d`;
+    };
+
     return (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3">
             {campaigns.map((campaign) => (
-                <Card key={campaign.id} className="flex flex-col overflow-hidden transition-all hover:shadow-md">
-                    <div className="relative h-48 w-full bg-gray-100">
-                        {campaign.image_url ? (
-                            <img
-                                src={campaign.image_url}
-                                alt={campaign.title}
-                                className="h-full w-full object-cover"
-                            />
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-gray-400">
-                                Sin imagen
+                <div
+                    key={campaign.id}
+                    className="bg-white rounded-2xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
+                >
+                    {/* Header: Avatar + Info + Badge */}
+                    <div className="flex items-start gap-4">
+                        {/* Avatar with gradient border */}
+                        <div className="flex-shrink-0">
+                            <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500">
+                                <div className="w-full h-full rounded-full bg-white p-[2px]">
+                                    {campaign.image_url ? (
+                                        <img
+                                            src={campaign.image_url}
+                                            alt={campaign.title}
+                                            className="w-full h-full rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                                            {campaign.title.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                        <div className="absolute top-2 right-2">
-                            <Badge variant={campaign.status === 'active' ? 'default' : 'secondary'} className="capitalize shadow-sm">
-                                {campaign.status}
-                            </Badge>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <h3 className="font-semibold text-gray-900 truncate">{campaign.title}</h3>
+                                <Badge
+                                    variant={campaign.status === 'active' ? 'default' : 'secondary'}
+                                    className={`capitalize text-xs flex-shrink-0 ${campaign.status === 'active'
+                                        ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                                        : ''
+                                        }`}
+                                >
+                                    {campaign.status === 'active' ? 'Activa' : campaign.status === 'completed' ? 'Completada' : 'Archivada'}
+                                </Badge>
+                            </div>
+
+                            <p className="text-sm text-gray-500 line-clamp-1 mb-3">{campaign.description}</p>
+
+                            {/* Stats Row */}
+                            <div className="flex items-center gap-4 text-xs">
+                                <div className="flex items-center gap-1.5 text-gray-500">
+                                    <DollarSignIcon className="h-3.5 w-3.5" />
+                                    <span className="font-medium">${campaign.budget?.toLocaleString() || 0}</span>
+                                    <span className="text-gray-400">total</span>
+                                </div>
+                                {campaign.cost_per_1k_views && campaign.cost_per_1k_views > 0 && (
+                                    <div className="flex items-center gap-1.5 text-gray-500">
+                                        <span className="font-medium">${campaign.cost_per_1k_views}</span>
+                                        <span className="text-gray-400">/ 1K views</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-1.5 text-gray-400">
+                                    <span>{timeAgo(campaign.created_at)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                                onClick={() => onEdit(campaign)}
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+                                disabled={deletingId === campaign.id}
+                                onClick={() => handleDelete(campaign.id)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
                         </div>
                     </div>
-
-                    <CardHeader className="pb-2">
-                        <CardTitle className="line-clamp-1">{campaign.title}</CardTitle>
-                    </CardHeader>
-
-                    <CardContent className="flex-1 pb-2">
-                        <p className="line-clamp-2 text-sm text-gray-500 mb-4 h-10">
-                            {campaign.description}
-                        </p>
-
-                        <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-1 text-gray-600">
-                                <DollarSignIcon className="h-4 w-4" />
-                                <span className="font-semibold">{campaign.budget || 0}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-600">
-                                {/* Placeholder for subscriber count */}
-                                <Users className="h-4 w-4" />
-                                <span>--</span>
-                            </div>
-                        </div>
-                    </CardContent>
-
-                    <CardFooter className="grid grid-cols-2 gap-2 border-t bg-gray-50/50 p-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => onEdit(campaign)}
-                        >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            className="w-full"
-                            disabled={deletingId === campaign.id}
-                            onClick={() => handleDelete(campaign.id)}
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {deletingId === campaign.id ? '...' : 'Eliminar'}
-                        </Button>
-                    </CardFooter>
-                </Card>
+                </div>
             ))}
         </div>
     );

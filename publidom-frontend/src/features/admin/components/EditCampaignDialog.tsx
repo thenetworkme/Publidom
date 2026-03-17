@@ -15,7 +15,9 @@ const campaignSchema = z.object({
     title: z.string().min(3),
     description: z.string().min(10),
     budget: z.string().or(z.number()).transform(val => String(val)), // Handle both number (from DB) and string (from input)
+    cost_per_1k_views: z.string().or(z.number()).transform(val => String(val)),
     requirements: z.string(),
+    instructions_url: z.string().url().or(z.literal('')).optional(),
     status: z.enum(['active', 'completed', 'archived'])
 });
 
@@ -45,7 +47,9 @@ export function EditCampaignDialog({ campaign, open, onClose, onSuccess }: { cam
                 title: campaign.title,
                 description: campaign.description,
                 budget: campaign.budget,
+                cost_per_1k_views: campaign.cost_per_1k_views || 0,
                 requirements: reqString,
+                instructions_url: campaign.instructions_url || '',
                 status: campaign.status
             });
         }
@@ -63,7 +67,9 @@ export function EditCampaignDialog({ campaign, open, onClose, onSuccess }: { cam
                     title: data.title,
                     description: data.description,
                     budget: Number(data.budget),
+                    cost_per_1k_views: Number(data.cost_per_1k_views) || 0,
                     requirements: JSON.stringify(data.requirements.split('\n').filter((r: string) => r.trim() !== '')),
+                    instructions_url: data.instructions_url || null,
                     status: data.status,
                     updated_at: new Date().toISOString()
                 })
@@ -100,22 +106,32 @@ export function EditCampaignDialog({ campaign, open, onClose, onSuccess }: { cam
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Presupuesto</Label>
+                            <Label>Presupuesto Total</Label>
                             <Input {...register('budget')} type="number" step="0.01" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Estado</Label>
-                            <select {...register('status')} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                                <option value="active">Activa</option>
-                                <option value="completed">Completada</option>
-                                <option value="archived">Archivada</option>
-                            </select>
+                            <Label>Pago por 1000 views</Label>
+                            <Input {...register('cost_per_1k_views')} type="number" step="0.01" />
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Estado</Label>
+                        <select {...register('status')} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                            <option value="active">Activa</option>
+                            <option value="completed">Completada</option>
+                            <option value="archived">Archivada</option>
+                        </select>
                     </div>
 
                     <div className="space-y-2">
                         <Label>Requisitos (uno por línea)</Label>
                         <Textarea {...register('requirements')} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Link de instrucciones (opcional)</Label>
+                        <Input {...register('instructions_url')} type="url" placeholder="https://example.com/instrucciones" />
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">

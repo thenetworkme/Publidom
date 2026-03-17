@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Campaign } from "@/types/campaign";
 import { BadgeCheck, X } from "lucide-react";
+import { VideoSubmissionModal } from "@/components/ui/VideoSubmissionModal";
 
 // Helper to format time ago
 function timeAgo(dateString: string): string {
@@ -37,8 +38,14 @@ const YouTubeIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-// Campaign Details Modal
+// Campaign Details Modal with Participation Logic
 function CampaignModal({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
+    const [isParticipating, setIsParticipating] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isJoining, setIsJoining] = useState(false);
+    const [showVideoModal, setShowVideoModal] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     // Parse requirements - can be string (JSON) or already an array
     let requirements: string[] = [];
     if (campaign.requirements) {
@@ -54,122 +61,244 @@ function CampaignModal({ campaign, onClose }: { campaign: Campaign; onClose: () 
         }
     }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={onClose}
-            />
+    // Check participation status on mount
+    useEffect(() => {
+        const checkParticipation = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(
+                    `${import.meta.env.VITE_API_URL}/api/campaigns/${campaign.id}/participation-status`,
+                    {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }
+                );
+                const data = await response.json();
+                setIsParticipating(data.isParticipating);
+            } catch (err) {
+                console.error('Error checking participation:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        checkParticipation();
+    }, [campaign.id]);
 
-            {/* Modal */}
-            <div className="relative bg-white rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-                {/* Header with image */}
-                <div className="relative h-40 bg-gradient-to-br from-purple-500 to-pink-500">
-                    {campaign.image_url && (
-                        <img
-                            src={campaign.image_url}
-                            alt={campaign.title}
-                            className="w-full h-full object-cover"
-                        />
-                    )}
+    // Join campaign
+    const handleJoinCampaign = async () => {
+        setIsJoining(true);
+        setError(null);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/campaigns/${campaign.id}/join`,
+                {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Error al unirse a la campaña');
+            }
+
+            setIsParticipating(true);
+            // Redirect to add-clips page
+            window.location.href = '/add-clips';
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsJoining(false);
+        }
+    };
+
+    // Handle video submission success
+    const handleSubmissionSuccess = () => {
+        setShowVideoModal(false);
+        // Optionally refresh or show success message
+    };
+
+    return (
+        <>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                {/* Backdrop - Transparent, just for click-outside-to-close */}
+                <div
+                    className="absolute inset-0"
+                    onClick={onClose}
+                />
+
+                {/* Modal */}
+                <div className="relative bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                    {/* Close button */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors"
+                        className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
 
-                    {/* Avatar overlay */}
-                    <div className="absolute -bottom-8 left-6">
-                        <div className="w-16 h-16 rounded-full p-[3px] bg-gradient-to-br from-yellow-400 via-red-500 to-purple-600">
-                            <div className="w-full h-full rounded-full bg-white p-[2px]">
-                                {campaign.image_url ? (
-                                    <img
-                                        src={campaign.image_url}
-                                        alt={campaign.title}
-                                        className="w-full h-full rounded-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-                                        {campaign.title.charAt(0).toUpperCase()}
-                                    </div>
-                                )}
+                    {/* Content */}
+                    <div className="pt-8 px-6 pb-6 overflow-y-auto max-h-[85vh]">
+                        {/* Avatar centered at top */}
+                        <div className="flex justify-center mb-6">
+                            <div className="w-20 h-20 rounded-full p-[3px] bg-gradient-to-br from-yellow-400 via-red-500 to-purple-600">
+                                <div className="w-full h-full rounded-full bg-white p-[2px]">
+                                    {campaign.image_url ? (
+                                        <img
+                                            src={campaign.image_url}
+                                            alt={campaign.title}
+                                            className="w-full h-full rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-2xl">
+                                            {campaign.title.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* Content */}
-                <div className="pt-12 px-6 pb-6 overflow-y-auto max-h-[calc(85vh-160px)]">
-                    {/* Title */}
-                    <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-xl font-bold text-gray-900">{campaign.title}</h2>
-                        <BadgeCheck className="w-5 h-5 text-blue-500" />
-                    </div>
-
-                    <p className="text-sm text-gray-400 mb-4">{timeAgo(campaign.created_at)}</p>
-
-                    {/* Price */}
-                    {campaign.budget && campaign.budget > 0 && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-4">
-                            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Recompensa</p>
-                            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                ${campaign.budget.toLocaleString()}
-                            </span>
-                            <span className="text-sm text-gray-400 ml-2">per 1M views</span>
+                        {/* Title */}
+                        <div className="text-center mb-4">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                                <h2 className="text-xl font-bold text-gray-900">{campaign.title}</h2>
+                                <BadgeCheck className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <p className="text-sm text-gray-400">{timeAgo(campaign.created_at)}</p>
+                            {isParticipating && (
+                                <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-green-50 text-green-600 text-xs font-medium rounded-full">
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                    Inscrito
+                                </span>
+                            )}
                         </div>
-                    )}
 
-                    {/* Description */}
-                    <div className="mb-4">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Descripción</h3>
-                        <p className="text-sm text-gray-600 leading-relaxed">
-                            {campaign.description}
-                        </p>
-                    </div>
+                        {/* Price - Using cost_per_1k_views if available, fallback to budget */}
+                        {(campaign.cost_per_1k_views && campaign.cost_per_1k_views > 0) || (campaign.budget && campaign.budget > 0) ? (
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-4">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 text-center">Recompensa</p>
+                                <div className="text-center">
+                                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                        ${campaign.cost_per_1k_views || campaign.budget?.toLocaleString()}
+                                    </span>
+                                    <span className="text-sm text-gray-400 ml-2">
+                                        {campaign.cost_per_1k_views ? 'por 1K views' : 'presupuesto total'}
+                                    </span>
+                                </div>
+                            </div>
+                        ) : null}
 
-                    {/* Requirements */}
-                    {requirements.length > 0 && (
+                        {/* Description */}
                         <div className="mb-4">
-                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Requisitos</h3>
-                            <ul className="space-y-2">
-                                {requirements.map((req, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 flex-shrink-0" />
-                                        {req}
-                                    </li>
-                                ))}
-                            </ul>
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Descripción</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                {campaign.description}
+                            </p>
                         </div>
-                    )}
 
-                    {/* Social platforms */}
-                    <div className="mb-6">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Plataformas</h3>
-                        <div className="flex gap-3">
-                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                                <TikTokIcon className="w-4 h-4" />
-                                <span className="text-xs font-medium">TikTok</span>
+                        {/* Requirements */}
+                        {requirements.length > 0 && (
+                            <div className="mb-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2">Requisitos</h3>
+                                <ul className="space-y-2">
+                                    {requirements.map((req, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 flex-shrink-0" />
+                                            {req}
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                                <InstagramIcon className="w-4 h-4" />
-                                <span className="text-xs font-medium">Instagram</span>
+                        )}
+
+                        {/* Instructions Link */}
+                        {campaign.instructions_url && (
+                            <div className="mb-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2">Instrucciones</h3>
+                                <a
+                                    href={campaign.instructions_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-sm font-medium text-gray-700 transition-colors"
+                                >
+                                    <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                    </svg>
+                                    Ver instrucciones de la campaña
+                                    <svg className="w-4 h-4 ml-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                                <YouTubeIcon className="w-4 h-4" />
-                                <span className="text-xs font-medium">YouTube</span>
+                        )}
+
+                        {/* Social platforms */}
+                        <div className="mb-6">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Plataformas</h3>
+                            <div className="flex gap-3">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                                    <TikTokIcon className="w-4 h-4" />
+                                    <span className="text-xs font-medium">TikTok</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                                    <InstagramIcon className="w-4 h-4" />
+                                    <span className="text-xs font-medium">Instagram</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                                    <YouTubeIcon className="w-4 h-4" />
+                                    <span className="text-xs font-medium">YouTube</span>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-50 rounded-lg text-red-600 text-sm">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* CTA Button - Changes based on participation status */}
+                        {isLoading ? (
+                            <button disabled className="w-full py-3 bg-gray-200 text-gray-500 font-semibold rounded-xl">
+                                Cargando...
+                            </button>
+                        ) : isParticipating ? (
+                            <button
+                                onClick={() => setShowVideoModal(true)}
+                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity"
+                            >
+                                Agregar Video
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleJoinCampaign}
+                                disabled={isJoining}
+                                className="w-full py-3 bg-black text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+                            >
+                                {isJoining ? 'Uniéndose...' : 'Participar en campaña'}
+                            </button>
+                        )}
                     </div>
-
-                    {/* CTA Button */}
-                    <button className="w-full py-3 bg-black text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors">
-                        Participar en campaña
-                    </button>
                 </div>
             </div>
-        </div>
+
+            {/* Video Submission Modal */}
+            {showVideoModal && (
+                <VideoSubmissionModal
+                    isOpen={showVideoModal}
+                    onClose={() => setShowVideoModal(false)}
+                    campaignId={campaign.id}
+                    campaignTitle={campaign.title}
+                    onSubmitSuccess={handleSubmissionSuccess}
+                />
+            )}
+        </>
     );
 }
 

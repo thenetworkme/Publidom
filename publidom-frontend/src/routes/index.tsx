@@ -5,7 +5,8 @@ import { EarningsPage } from "@/features/earnings/EarningsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import Login from "@/features/auth/Login";
 import Signup from "@/features/auth/Signup";
-import App from "@/App"; // Assuming App is the main layout component
+import App from "@/App"; // Main layout with header for regular users
+import { AdminLayout } from "@/components/layout/AdminLayout"; // Admin layout without header
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminGuard } from "@/features/auth/components/AdminGuard";
 import AdminCampaignsPage from "@/features/admin/AdminCampaignsPage";
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
         element: <Signup />,
     },
     {
+        // Regular user routes with header
         path: "/",
         element: <ProtectedRoute />,
         children: [
@@ -42,9 +44,20 @@ export const router = createBrowserRouter([
                         path: "settings",
                         element: <SettingsPage />,
                     },
+                ],
+            },
+        ],
+    },
+    {
+        // Admin routes WITHOUT header
+        path: "/admin",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                element: <AdminGuard />,
+                children: [
                     {
-                        path: "admin",
-                        element: <AdminGuard />,
+                        element: <AdminLayout />,
                         children: [
                             {
                                 path: "campaigns",

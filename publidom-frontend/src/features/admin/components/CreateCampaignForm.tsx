@@ -16,7 +16,11 @@ const campaignSchema = z.object({
     budget: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
         message: "El presupuesto debe ser un número positivo",
     }),
+    cost_per_1k_views: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+        message: "El costo por 1000 views debe ser un número válido",
+    }),
     requirements: z.string().min(5, "Especifica al menos un requisito"),
+    instructions_url: z.string().url("Debe ser una URL válida").or(z.literal('')).optional(),
 });
 
 interface ToastState {
@@ -73,7 +77,9 @@ export function CreateCampaignForm({ onSuccess }: { onSuccess: () => void }) {
                     title: data.title,
                     description: data.description,
                     budget: Number(data.budget),
+                    cost_per_1k_views: Number(data.cost_per_1k_views) || 0,
                     requirements: JSON.stringify(data.requirements.split('\n').filter((r: string) => r.trim() !== '')),
+                    instructions_url: data.instructions_url || null,
                     image_url: imageUrl,
                     status: 'active'
                 });
@@ -102,8 +108,8 @@ export function CreateCampaignForm({ onSuccess }: { onSuccess: () => void }) {
             {/* Toast Notification */}
             {toast.show && (
                 <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 animate-in slide-in-from-top-5 ${toast.type === 'success'
-                        ? 'bg-green-50 border border-green-200 text-green-800'
-                        : 'bg-red-50 border border-red-200 text-red-800'
+                    ? 'bg-green-50 border border-green-200 text-green-800'
+                    : 'bg-red-50 border border-red-200 text-red-800'
                     }`}>
                     {toast.type === 'success' ? (
                         <CheckCircle className="h-5 w-5 text-green-600" />
@@ -140,16 +146,29 @@ export function CreateCampaignForm({ onSuccess }: { onSuccess: () => void }) {
                             {errors.description && <span className="text-red-500 text-sm">{String(errors.description.message)}</span>}
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="budget">Presupuesto ($)</Label>
-                            <Input id="budget" type="number" step="0.01" {...register('budget')} placeholder="1000.00" />
-                            {errors.budget && <span className="text-red-500 text-sm">{String(errors.budget.message)}</span>}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="budget">Presupuesto Total ($)</Label>
+                                <Input id="budget" type="number" step="0.01" {...register('budget')} placeholder="1000.00" />
+                                {errors.budget && <span className="text-red-500 text-sm">{String(errors.budget.message)}</span>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="cost_per_1k_views">Pago por 1000 views ($)</Label>
+                                <Input id="cost_per_1k_views" type="number" step="0.01" {...register('cost_per_1k_views')} placeholder="5.00" />
+                                {errors.cost_per_1k_views && <span className="text-red-500 text-sm">{String(errors.cost_per_1k_views.message)}</span>}
+                            </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="requirements">Requisitos (uno por línea)</Label>
                             <Textarea id="requirements" {...register('requirements')} placeholder="- Tener 1000 seguidores&#10;- Ser mayor de edad" />
                             {errors.requirements && <span className="text-red-500 text-sm">{String(errors.requirements.message)}</span>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="instructions_url">Link de instrucciones (opcional)</Label>
+                            <Input id="instructions_url" type="url" {...register('instructions_url')} placeholder="https://example.com/instrucciones" />
+                            {errors.instructions_url && <span className="text-red-500 text-sm">{String(errors.instructions_url.message)}</span>}
                         </div>
 
                         <div className="space-y-2">

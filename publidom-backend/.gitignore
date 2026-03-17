@@ -13,3 +13,9 @@ delete_auth_users.js
 admin_features.sql
 diagnose_admin.sql 
 diagnose_admin.js
+add_campaign_fields.sql
+create_video_submissions.sql
+.env
+.env.local
+.env.development
+.env.production
